@@ -15,6 +15,7 @@ import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "students")
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Student {
 
     @Id

@@ -13,11 +13,15 @@ import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "employees")
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Employee {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false, unique = true)
+    private java.util.UUID empId = java.util.UUID.randomUUID();
 
     @NotBlank(message = "Employee name is required")
     @Size(max = 100)
@@ -84,5 +88,13 @@ public class Employee {
 
     public void setDepartment(String department) {
         this.department = department;
+    }
+
+    public java.util.UUID getEmpId() {
+        return empId;
+    }
+
+    public void setEmpId(java.util.UUID empId) {
+        this.empId = empId;
     }
 }

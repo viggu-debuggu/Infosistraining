@@ -30,6 +30,9 @@ public class Certification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true)
+    private java.util.UUID certId = java.util.UUID.randomUUID();
+
     @NotBlank(message = "Certification name is required")
     @Column(nullable = false, length = 150)
     private String name;
@@ -221,4 +224,12 @@ public class Certification {
         this.verificationHash = verificationHash;
     }
 
+
+    public java.util.UUID getCertId() {
+        return certId;
+    }
+
+    public void setCertId(java.util.UUID certId) {
+        this.certId = certId;
+    }
 }

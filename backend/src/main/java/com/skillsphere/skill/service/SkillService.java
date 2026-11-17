@@ -4,6 +4,8 @@ package com.skillsphere.skill.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,7 @@ public class SkillService {
         this.skillRepository = skillRepository;
     }
 
+    @Cacheable("skills")
     public List<Skill> getAllSkills() {
         return skillRepository.findAll();
     }
@@ -28,10 +31,12 @@ public class SkillService {
         return skillRepository.findById(id);
     }
 
+    @CacheEvict(value = "skills", allEntries = true)
     public Skill createSkill(Skill skill) {
         return skillRepository.save(skill);
     }
 
+    @CacheEvict(value = "skills", allEntries = true)
     public Skill updateSkill(Long id, Skill updatedSkill) {
         Skill existingSkill = skillRepository.findById(id)
                 .orElseThrow(() ->
@@ -45,6 +50,7 @@ public class SkillService {
         return skillRepository.save(existingSkill);
     }
 
+    @CacheEvict(value = "skills", allEntries = true)
     public void deleteSkill(Long id) {
         Skill existingSkill = skillRepository.findById(id)
                 .orElseThrow(() ->

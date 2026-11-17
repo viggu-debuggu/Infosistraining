@@ -13,6 +13,9 @@ public class InternalJob {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true)
+    private java.util.UUID jobId = java.util.UUID.randomUUID();
+
     @NotBlank(message = "Title is required")
     @Column(nullable = false, length = 200)
     private String title;
@@ -64,4 +67,12 @@ public class InternalJob {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public java.util.UUID getJobId() {
+        return jobId;
+    }
+
+    public void setJobId(java.util.UUID jobId) {
+        this.jobId = jobId;
+    }
 }

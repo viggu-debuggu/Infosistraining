@@ -1,6 +1,7 @@
 package com.skillsphere.skill.entity;
 
 import java.time.LocalDate;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
@@ -46,12 +47,17 @@ public class CourseEnrollment {
 
     public Course getCourse() { return course; }
     public void setCourse(Course course) { this.course = course; }
+    public Long getCourseId() { return course != null ? course.getId() : null; }
 
+    @JsonIgnore
     public Employee getEmployee() { return employee; }
     public void setEmployee(Employee employee) { this.employee = employee; }
+    public Long getEmployeeId() { return employee != null ? employee.getId() : null; }
 
+    @JsonIgnore
     public Student getStudent() { return student; }
     public void setStudent(Student student) { this.student = student; }
+    public Long getStudentId() { return student != null ? student.getId() : null; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
@@ -64,12 +70,4 @@ public class CourseEnrollment {
 
     public LocalDate getCompletedAt() { return completedAt; }
     public void setCompletedAt(LocalDate completedAt) { this.completedAt = completedAt; }
-
-    public Long getEmployeeId() {
-        return employee != null ? employee.getId() : null;
-    }
-
-    public Long getStudentId() {
-        return student != null ? student.getId() : null;
-    }
 }

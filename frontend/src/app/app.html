@@ -62,6 +62,30 @@
       <span>Frameworks</span>
     </button>
 
+    <p class="nav-label">ENTERPRISE PLATFORM &amp; GOVERNANCE</p>
+
+    <button class="nav-item" [class.active]="currentPage === 'trainings'" (click)="currentPage = 'trainings'; loadTrainings()">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      <span>Trainings &amp; Bootcamps</span>
+    </button>
+    <button class="nav-item" [class.active]="currentPage === 'reports'" (click)="currentPage = 'reports'; loadReports()">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span>System Reports</span>
+    </button>
+    <button class="nav-item" [class.active]="currentPage === 'audit'" (click)="currentPage = 'audit'; loadAuditLogs()">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span>Audit Trail &amp; Events</span>
+    </button>
+    <button class="nav-item" [class.active]="currentPage === 'promotions'" (click)="currentPage = 'promotions'; loadPromotionCriteria()">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      <span>Promotion Criteria</span>
+    </button>
+    <button class="nav-item" [class.active]="currentPage === 'approvals'" (click)="currentPage = 'approvals'; loadApprovals()">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>Approvals &amp; Governance</span>
+      <span class="bell-badge" *ngIf="pendingApprovalCount > 0" style="position:static; margin-left:auto;">{{ pendingApprovalCount }}</span>
+    </button>
+
     <div class="sidebar-footer">
       <div class="user-meta">
         <span class="user-name">{{ authService.currentUser?.username }}</span>
@@ -1849,6 +1873,437 @@
         </div>
       </section>
     </section>
+
+    <!-- ======================================================== -->
+    <!-- 2. TRAININGS & BOOTCAMPS MANAGEMENT VIEW                -->
+    <!-- ======================================================== -->
+    <section class="page-container" *ngIf="currentPage === 'trainings'">
+      <div class="page-header">
+        <div>
+          <h2>Training Programs &amp; Bootcamps</h2>
+          <p class="subtitle">Schedule and manage workshops, webinars, and bootcamps to close competency gaps</p>
+        </div>
+        <button class="primary-btn" type="button" (click)="showTrainingForm = !showTrainingForm">
+          {{ showTrainingForm ? 'Close Form' : '+ Schedule Training' }}
+        </button>
+      </div>
+
+      <div class="alert-banner success" *ngIf="trainingSuccess">{{ trainingSuccess }}</div>
+      <div class="alert-banner error" *ngIf="trainingError">{{ trainingError }}</div>
+
+      <!-- Training Create Modal/Form -->
+      <div class="form-modal-card" *ngIf="showTrainingForm">
+        <h3>Schedule New Enterprise Training</h3>
+        <form (ngSubmit)="saveTraining()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Training Title <span class="required-star">*</span></label>
+              <input type="text" [(ngModel)]="newTraining.title" name="tTitle" placeholder="e.g. Angular 20 Signals & Architecture" required />
+            </div>
+            <div class="form-group">
+              <label>Trainer / Instructor</label>
+              <input type="text" [(ngModel)]="newTraining.trainer" name="tTrainer" placeholder="e.g. Jane Doe" />
+            </div>
+            <div class="form-group">
+              <label>Session Type</label>
+              <select [(ngModel)]="newTraining.type" name="tType">
+                <option value="BOOTCAMP">BOOTCAMP</option>
+                <option value="WORKSHOP">WORKSHOP</option>
+                <option value="WEBINAR">WEBINAR</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Date &amp; Time</label>
+              <input type="datetime-local" [(ngModel)]="newTraining.date" name="tDate" />
+            </div>
+            <div class="form-group">
+              <label>Max Capacity</label>
+              <input type="number" [(ngModel)]="newTraining.capacity" name="tCap" min="1" max="500" />
+            </div>
+            <div class="form-group">
+              <label>Location / Virtual Room</label>
+              <input type="text" [(ngModel)]="newTraining.locationOrUrl" name="tLoc" placeholder="e.g. Enterprise Virtual Lab Room A" />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="primary-btn" (click)="saveTraining()" [disabled]="trainingSaving">
+              {{ trainingSaving ? 'Scheduling...' : 'Save & Publish Training' }}
+            </button>
+            <button type="button" class="secondary-btn" (click)="showTrainingForm = false">Cancel</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Trainings List -->
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Title &amp; Location</th>
+              <th>Trainer</th>
+              <th>Type</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Enrolled / Capacity</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of trainings">
+              <td>
+                <strong>{{ t.title }}</strong><br/>
+                <small style="color:#64748b">{{ t.locationOrUrl || 'Virtual Classroom' }}</small>
+              </td>
+              <td>{{ t.trainer }}</td>
+              <td><span class="status-pill neutral">{{ t.type }}</span></td>
+              <td>{{ t.date | slice:0:16 }}</td>
+              <td><span class="status-pill success">{{ t.status || 'SCHEDULED' }}</span></td>
+              <td>
+                <strong>{{ t.enrolledCount || 0 }}</strong> / {{ t.capacity || 50 }}
+                <div style="width:70px; height:4px; background:#e2e8f0; border-radius:2px; margin-top:4px; overflow:hidden;">
+                  <div [style.width.%]="((t.enrolledCount || 0) / (t.capacity || 50)) * 100" style="height:100%; background:#3b82f6;"></div>
+                </div>
+              </td>
+              <td>
+                <button class="secondary-btn small-btn" type="button" (click)="enrollInTraining(t.id)">1-Click Enroll</button>
+              </td>
+            </tr>
+            <tr *ngIf="trainings.length === 0">
+              <td colspan="7" class="empty-state">No training programs scheduled yet. Click "+ Schedule Training" above to publish one.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- 3. SYSTEM REPORTS GENERATOR & VIEWER                     -->
+    <!-- ======================================================== -->
+    <section class="page-container" *ngIf="currentPage === 'reports'">
+      <div class="page-header">
+        <div>
+          <h2>System Intelligence &amp; Executive Reports</h2>
+          <p class="subtitle">Generate, inspect, and export enterprise compliance, competency, and learning analytics</p>
+        </div>
+        <button class="secondary-btn" type="button" (click)="loadReports()">&#8635; Refresh Reports</button>
+      </div>
+
+      <div class="alert-banner success" *ngIf="reportSuccess">{{ reportSuccess }}</div>
+      <div class="alert-banner error" *ngIf="reportError">{{ reportError }}</div>
+
+      <!-- Report Generation Toolbar -->
+      <div class="report-actions-toolbar">
+        <button class="m-report-btn" type="button" [disabled]="reportLoading" (click)="generateMilestoneReport(1)">
+          {{ reportLoading ? 'Generating...' : '+ Skill Competency Report' }}
+        </button>
+        <button class="m-report-btn" type="button" [disabled]="reportLoading" (click)="generateMilestoneReport(2)">
+          {{ reportLoading ? 'Generating...' : '+ LMS & Course Completion Report' }}
+        </button>
+        <button class="m-report-btn" type="button" [disabled]="reportLoading" (click)="generateMilestoneReport(3)">
+          {{ reportLoading ? 'Generating...' : '+ Certification Compliance Report' }}
+        </button>
+        <button class="m-report-btn" type="button" [disabled]="reportLoading" (click)="generateMilestoneReport(4)">
+          {{ reportLoading ? 'Generating...' : '+ Career Mobility & Promotion Report' }}
+        </button>
+        <button class="m-report-btn master" type="button" [disabled]="reportLoading" (click)="generateMilestoneReport(5)">
+          {{ reportLoading ? 'Generating...' : '★ Master Talent Intelligence Report' }}
+        </button>
+      </div>
+
+      <!-- Reports History Table -->
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Report Title</th>
+              <th>Type</th>
+              <th>Generated By</th>
+              <th>Generated At</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of systemReports">
+              <td><strong>{{ r.title }}</strong></td>
+              <td><span class="status-pill neutral">{{ r.type }}</span></td>
+              <td>{{ r.generatedBy }}</td>
+              <td>{{ r.generatedAt | slice:0:19 }}</td>
+              <td>
+                <div style="display:flex; gap:0.5rem;">
+                  <button class="secondary-btn small-btn" type="button" (click)="selectedReport = r">View JSON</button>
+                  <button class="primary-btn small-btn" type="button" (click)="downloadReportJson(r)">Download</button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="systemReports.length === 0">
+              <td colspan="5" class="empty-state">No reports generated yet. Click any button in the toolbar above to generate a report.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Report JSON Modal/Drawer -->
+      <div class="report-viewer-card" *ngIf="selectedReport">
+        <div class="viewer-header">
+          <div>
+            <h3>{{ selectedReport.title }}</h3>
+            <span class="status-pill neutral">{{ selectedReport.type }}</span>
+            <small style="color:#94a3b8; margin-left:0.75rem;">Generated by {{ selectedReport.generatedBy }} at {{ selectedReport.generatedAt | slice:0:19 }}</small>
+          </div>
+          <div style="display:flex; gap:0.5rem;">
+            <button class="primary-btn small-btn" type="button" (click)="downloadReportJson(selectedReport)">Export JSON</button>
+            <button class="secondary-btn small-btn" type="button" (click)="selectedReport = null">&#10005; Close</button>
+          </div>
+        </div>
+        <pre class="json-code-box">{{ formatJson(selectedReport.data) }}</pre>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- 4. IMMUTABLE AUDIT TRAIL & EVENT LOGGING                -->
+    <!-- ======================================================== -->
+    <section class="page-container" *ngIf="currentPage === 'audit'">
+      <div class="page-header">
+        <div>
+          <h2>Enterprise Audit Trail &amp; Event Stream</h2>
+          <p class="subtitle">Immutable logging for all skill assessments, course enrollments, trainings, and promotions</p>
+        </div>
+        <div style="display:flex; gap:0.75rem;">
+          <button class="primary-btn" type="button" (click)="showAuditForm = !showAuditForm">
+            {{ showAuditForm ? 'Close Form' : '+ Record Audit Event' }}
+          </button>
+          <button class="secondary-btn" type="button" (click)="loadAuditLogs()">&#8635; Refresh Logs</button>
+        </div>
+      </div>
+
+      <div class="alert-banner success" *ngIf="auditSuccess">{{ auditSuccess }}</div>
+      <div class="alert-banner error" *ngIf="auditError">{{ auditError }}</div>
+
+      <!-- Audit Event Log Modal -->
+      <div class="form-modal-card" *ngIf="showAuditForm">
+        <h3>Record Custom Compliance Audit Event</h3>
+        <form (ngSubmit)="saveCustomAuditLog()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Target Entity / Domain</label>
+              <select [(ngModel)]="newAuditLog.entity" name="aEntity">
+                <option value="SkillAssessment">SkillAssessment</option>
+                <option value="Training">Training</option>
+                <option value="PromotionCriteria">PromotionCriteria</option>
+                <option value="Certification">Certification</option>
+                <option value="ComplianceAudit">ComplianceAudit</option>
+                <option value="GovernanceWorkflow">GovernanceWorkflow</option>
+                <option value="EventStream">EventStream</option>
+              </select>
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label>Action &amp; Audit Event Details <span class="required-star">*</span></label>
+              <input type="text" [(ngModel)]="newAuditLog.action" name="aAction" placeholder="e.g. AUDIT_VERIFIED: Quarterly competency compliance verified for 120 engineers" required />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="primary-btn" (click)="saveCustomAuditLog()">Submit Audit Event</button>
+            <button type="button" class="secondary-btn" (click)="showAuditForm = false">Cancel</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>User</th>
+              <th>Entity</th>
+              <th>Action / Event Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let log of auditLogs">
+              <td><code>{{ log.timestamp | slice:0:19 }}</code></td>
+              <td><strong>{{ log.username }}</strong></td>
+              <td><span class="status-pill neutral">{{ log.entity }}</span></td>
+              <td>{{ log.action }}</td>
+            </tr>
+            <tr *ngIf="auditLogs.length === 0">
+              <td colspan="4" class="empty-state">No audit logs recorded yet. Perform any action or click "+ Record Audit Event" above.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- 5. APPROVALS & GOVERNANCE VIEW (CRITICAL ACTIONS)       -->
+    <!-- ======================================================== -->
+    <section class="page-container" *ngIf="currentPage === 'approvals'">
+      <div class="page-header">
+        <div>
+          <h2>Critical Actions &amp; Governance Approvals</h2>
+          <p class="subtitle">Multi-tier HR &amp; Manager approval workflow for promotions, certification renewals, and skill verification (Page 9 requirement)</p>
+        </div>
+        <button class="secondary-btn" type="button" (click)="loadApprovals()">&#8635; Refresh Queue</button>
+      </div>
+
+      <div class="alert-banner success" *ngIf="approvalSuccess">{{ approvalSuccess }}</div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Request Type</th>
+              <th>Employee</th>
+              <th>Title &amp; Justification</th>
+              <th>Submitted</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let req of approvalRequests">
+              <td><span class="status-pill neutral">{{ req.requestType }}</span></td>
+              <td><strong>{{ req.employeeName || ('Employee #' + req.employeeId) }}</strong></td>
+              <td>
+                <strong>{{ req.title }}</strong><br/>
+                <small style="color:#64748b">{{ req.details }}</small>
+                <div *ngIf="req.reviewNotes" style="margin-top:4px; font-size:12px; color:#10b981;">
+                  <em>Review Notes: {{ req.reviewNotes }}</em>
+                </div>
+              </td>
+              <td>{{ req.submittedAt | slice:0:16 }}</td>
+              <td>
+                <span class="status-pill" [class.success]="req.status === 'APPROVED'" [class.error]="req.status === 'REJECTED'" [class.warning]="req.status === 'PENDING'">
+                  {{ req.status }}
+                </span>
+              </td>
+              <td>
+                <div class="action-btn-group" *ngIf="req.status === 'PENDING'">
+                  <button class="primary-btn small-btn" type="button" (click)="approveAction(req.id)">Approve</button>
+                  <button class="secondary-btn small-btn danger-hover" type="button" (click)="rejectAction(req.id)">Reject</button>
+                </div>
+                <span *ngIf="req.status !== 'PENDING'" style="color:#64748b; font-size:12px;">Completed</span>
+              </td>
+            </tr>
+            <tr *ngIf="approvalRequests.length === 0">
+              <td colspan="6" class="empty-state">No approval requests in queue.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- 6. PROMOTION CRITERIA BENCHMARK MANAGER                 -->
+    <!-- ======================================================== -->
+    <section class="page-container" *ngIf="currentPage === 'promotions'">
+      <div class="page-header">
+        <div>
+          <h2>Promotion Criteria &amp; Benchmarks</h2>
+          <p class="subtitle">Enterprise eligibility rules, skill score thresholds, and career progression criteria</p>
+        </div>
+        <div style="display:flex; gap:0.75rem;">
+          <button class="primary-btn" type="button" (click)="showPromotionForm = !showPromotionForm">
+            {{ showPromotionForm ? 'Close Form' : '+ Add Promotion Criteria' }}
+          </button>
+          <button class="secondary-btn" type="button" (click)="loadPromotionCriteria()">&#8635; Refresh</button>
+        </div>
+      </div>
+
+      <div class="alert-banner success" *ngIf="promotionSuccess">{{ promotionSuccess }}</div>
+      <div class="alert-banner error" *ngIf="promotionError">{{ promotionError }}</div>
+
+      <!-- Promotion Criteria Create Modal/Form -->
+      <div class="form-modal-card" *ngIf="showPromotionForm">
+        <h3>Configure New Promotion Criteria Benchmark</h3>
+        <form (ngSubmit)="savePromotionCriteria()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Select Target Employee <span class="required-star">*</span></label>
+              <select [(ngModel)]="newPromotionCriteria.employeeId" name="pcEmp">
+                <option *ngFor="let emp of employees" [value]="emp.id">{{ emp.name }} ({{ emp.jobTitle }} - #{{ emp.id }})</option>
+                <option [value]="1" *ngIf="employees.length === 0">John Smith (Developer - #1)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Target Role / Position <span class="required-star">*</span></label>
+              <input type="text" [(ngModel)]="newPromotionCriteria.targetRole" name="pcRole" placeholder="e.g. Tech Lead, Senior Architect" required />
+            </div>
+            <div class="form-group">
+              <label>Required Skill Benchmark Score (%)</label>
+              <input type="number" [(ngModel)]="newPromotionCriteria.requiredSkillScore" name="pcReqScore" min="50" max="100" />
+            </div>
+            <div class="form-group">
+              <label>Required Experience (Years)</label>
+              <input type="number" [(ngModel)]="newPromotionCriteria.requiredYearsExperience" name="pcExp" min="1" max="25" />
+            </div>
+            <div class="form-group">
+              <label>Current Evaluated Score (%)</label>
+              <input type="number" [(ngModel)]="newPromotionCriteria.currentScore" name="pcCurScore" min="0" max="100" />
+            </div>
+            <div class="form-group">
+              <label>Promotion Review Cycle</label>
+              <input type="text" [(ngModel)]="newPromotionCriteria.promotionCycle" name="pcCycle" placeholder="e.g. Q4 2026 Enterprise Review" />
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label>Candidate Justification &amp; Competency Notes</label>
+              <input type="text" [(ngModel)]="newPromotionCriteria.notes" name="pcNotes" placeholder="e.g. Closed cloud architecture gaps; mentor recommendation attached." />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="primary-btn" (click)="savePromotionCriteria()" [disabled]="promotionSaving">
+              {{ promotionSaving ? 'Saving...' : 'Save Promotion Criteria' }}
+            </button>
+            <button type="button" class="secondary-btn" (click)="showPromotionForm = false">Cancel</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Employee ID</th>
+              <th>Target Role</th>
+              <th>Benchmark Criteria</th>
+              <th>Evaluation Score</th>
+              <th>Eligibility Status</th>
+              <th>Review Cycle</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let pc of promotionCriteriaList">
+              <td><strong>#{{ pc.employeeId }}</strong></td>
+              <td><strong>{{ parseCriteria(pc.criteriaJson).targetRole || 'Tech Lead' }}</strong></td>
+              <td>
+                Benchmark: <strong>{{ parseCriteria(pc.criteriaJson).requiredSkillScore || 80 }}%</strong> | 
+                Exp: {{ parseCriteria(pc.criteriaJson).requiredYearsExperience || 5 }} yrs
+              </td>
+              <td>
+                <strong>{{ parseCriteria(pc.criteriaJson).currentScore || 80 }}%</strong>
+                <div style="width:70px; height:4px; background:#e2e8f0; border-radius:2px; margin-top:4px; overflow:hidden;">
+                  <div [style.width.%]="parseCriteria(pc.criteriaJson).currentScore || 80" [style.background]="(parseCriteria(pc.criteriaJson).currentScore || 80) >= (parseCriteria(pc.criteriaJson).requiredSkillScore || 80) ? '#10b981' : '#f59e0b'" style="height:100%;"></div>
+                </div>
+              </td>
+              <td>
+                <span class="status-pill" [class.success]="parseCriteria(pc.criteriaJson).isEligible" [class.warning]="!parseCriteria(pc.criteriaJson).isEligible">
+                  {{ parseCriteria(pc.criteriaJson).isEligible ? 'ELIGIBLE' : 'PENDING GAPS' }}
+                </span>
+              </td>
+              <td>{{ parseCriteria(pc.criteriaJson).promotionCycle || 'Q4 Review' }}</td>
+              <td>
+                <button class="primary-btn small-btn" type="button" (click)="nominateForPromotion(pc)">
+                  + Nominate for Approval
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="promotionCriteriaList.length === 0">
+              <td colspan="7" class="empty-state">No promotion criteria defined yet. Click "+ Add Promotion Criteria" above to define one.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
   </main>
 </div>
-

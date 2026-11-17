@@ -257,6 +257,62 @@ export interface QuestionReviewItem {
   explanation: string;
 }
 
+export interface Training {
+  id?: number;
+  trainId?: string;
+  title: string;
+  date: string;
+  trainer: string;
+  type?: string;
+  status?: string;
+  capacity?: number;
+  enrolledCount?: number;
+  courseId?: number;
+  locationOrUrl?: string;
+}
+
+export interface SystemReport {
+  id?: number;
+  reportId?: string;
+  title: string;
+  type: string;
+  data: string;
+  generatedAt?: string;
+  generatedBy?: string;
+}
+
+export interface AuditLogEntry {
+  id?: number;
+  entity: string;
+  action: string;
+  username: string;
+  timestamp: string;
+}
+
+export interface PromotionCriteriaItem {
+  id?: number;
+  employeeId: number;
+  criteriaJson: string;
+  createdAt?: string;
+}
+
+export interface ApprovalRequest {
+  id?: number;
+  requestId?: string;
+  requestType: string;
+  employeeId?: number;
+  employeeName?: string;
+  title: string;
+  details?: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  submittedAt?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+}
+
+
+
 export interface AssessmentReviewView {
   assessmentId: number;
   assessmentTitle: string;

@@ -14,6 +14,9 @@ public class Course {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true)
+    private java.util.UUID courseId = java.util.UUID.randomUUID();
+
     @NotBlank(message = "Course title is required")
     @Column(nullable = false, length = 200)
     private String title;
@@ -84,4 +87,12 @@ public class Course {
 
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
+
+    public java.util.UUID getCourseId() {
+        return courseId;
+    }
+
+    public void setCourseId(java.util.UUID courseId) {
+        this.courseId = courseId;
+    }
 }

@@ -18,6 +18,9 @@ public class Skill {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true)
+    private java.util.UUID skillId = java.util.UUID.randomUUID();
+
     @NotBlank(message = "Skill name is required")
     @Size(max = 100, message = "Skill name cannot exceed 100 characters")
     @Column(nullable = false, unique = true, length = 100)
@@ -67,5 +70,13 @@ public class Skill {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public java.util.UUID getSkillId() {
+        return skillId;
+    }
+
+    public void setSkillId(java.util.UUID skillId) {
+        this.skillId = skillId;
     }
 }

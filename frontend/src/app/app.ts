@@ -15,6 +15,7 @@ import { IssuedCertificateService } from './issued-certificate.service';
 import { CourseService } from './course.service';
 import { CareerService } from './career.service';
 import { LearningService } from './learning.service';
+import { PlatformExtensionsService } from './platform-extensions.service';
 import {
   Assessment,
   Certification,
@@ -30,7 +31,12 @@ import {
   InternalJob,
   JobApplication,
   CertificateAuthenticityResponse,
-  CertificateAuthenticityCheck
+  CertificateAuthenticityCheck,
+  Training,
+  SystemReport,
+  AuditLogEntry,
+  PromotionCriteriaItem,
+  ApprovalRequest
 } from './feature-models';
 
 interface Employee {
@@ -49,7 +55,7 @@ interface Employee {
   styleUrl: './app.scss'
 })
 export class WorkspaceComponent implements OnInit {
-  currentPage:
+    private _currentPage:
     | 'dashboard'
     | 'employees'
     | 'skills'
@@ -58,7 +64,27 @@ export class WorkspaceComponent implements OnInit {
     | 'frameworks'
     | 'certifications'
     | 'courses'
-    | 'career' = 'dashboard';
+    | 'career'
+    | 'trainings'
+    | 'reports'
+    | 'audit'
+    | 'promotions'
+    | 'approvals' = 'dashboard';
+
+  get currentPage() {
+    return this._currentPage;
+  }
+
+  set currentPage(page: any) {
+    this._currentPage = page;
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      const mainEl = document.querySelector('.main-content');
+      if (mainEl) {
+        mainEl.scrollTop = 0;
+      }
+    }
+  }
 
 
   employees: Employee[] = [];
@@ -506,6 +532,7 @@ export class WorkspaceComponent implements OnInit {
     public courseService: CourseService,
     public careerService: CareerService,
     private learningService: LearningService,
+    public platformExtensions: PlatformExtensionsService,
     @Inject(AuthService) public authService: AuthService,
     private router: Router
   ) {}
@@ -1938,5 +1965,399 @@ export class WorkspaceComponent implements OnInit {
       completedH: Math.round((d.completed / maxVal) * 100)
     }));
   }
-}
 
+  // --- Platform Extensions State (Trainings, Reports, Audit, Approvals, Promotion Criteria) ---
+  trainings: Training[] = [];
+  trainingLoading = false;
+  trainingSaving = false;
+  trainingSuccess = '';
+  trainingError = '';
+  showTrainingForm = false;
+  newTraining: Training = {
+    title: '',
+    date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 16),
+    trainer: 'Jane Doe',
+    type: 'BOOTCAMP',
+    capacity: 50,
+    locationOrUrl: 'Enterprise Virtual Lab Room A'
+  };
+
+  systemReports: SystemReport[] = [];
+  reportLoading = false;
+  reportSuccess = '';
+  reportError = '';
+  selectedReport: SystemReport | null = null;
+
+  auditLogs: AuditLogEntry[] = [];
+  auditLoading = false;
+  showAuditForm = false;
+  newAuditLog = {
+    entity: 'SkillAssessment',
+    action: ''
+  };
+  auditSuccess = '';
+  auditError = '';
+
+  promotionCriteriaList: PromotionCriteriaItem[] = [];
+  promotionLoading = false;
+  promotionSaving = false;
+  promotionSuccess = '';
+  promotionError = '';
+  showPromotionForm = false;
+  newPromotionCriteria = {
+    employeeId: 1,
+    targetRole: 'Tech Lead',
+    requiredSkillScore: 80,
+    requiredYearsExperience: 5,
+    currentScore: 82,
+    promotionCycle: 'Q4 2026 Annual Review',
+    notes: 'Demonstrated deep microservices competencies and mentoring juniors.'
+  };
+
+  loadTrainings(): void {
+    this.trainingLoading = true;
+    this.platformExtensions.getTrainings().subscribe({
+      next: (data) => {
+        this.trainings = Array.isArray(data) ? data : [];
+        this.trainingLoading = false;
+      },
+      error: () => { this.trainingLoading = false; }
+    });
+  }
+
+  saveTraining(): void {
+    this.trainingError = '';
+    const title = (this.newTraining.title || '').trim();
+    if (!title) {
+      this.trainingError = 'Please enter a training program title.';
+      return;
+    }
+    const trainer = (this.newTraining.trainer || '').trim() || (this.authService.currentUser?.username || 'Jane Doe');
+    const dateVal = this.newTraining.date || new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 16);
+    const capacityVal = Number(this.newTraining.capacity) || 50;
+
+    const payload: Training = {
+      title,
+      trainer,
+      date: dateVal,
+      type: this.newTraining.type || 'BOOTCAMP',
+      capacity: capacityVal,
+      locationOrUrl: this.newTraining.locationOrUrl || 'Enterprise Virtual Lab Room A'
+    };
+
+    this.trainingSaving = true;
+    this.platformExtensions.scheduleTraining(payload).subscribe({
+      next: (created) => {
+        this.trainings.unshift(created);
+        this.showTrainingForm = false;
+        this.trainingSaving = false;
+        this.trainingSuccess = `Training "${created.title}" scheduled successfully!`;
+        this.newTraining = {
+          title: '',
+          date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 16),
+          trainer: 'Jane Doe',
+          type: 'BOOTCAMP',
+          capacity: 50,
+          locationOrUrl: 'Enterprise Virtual Lab Room A'
+        };
+        setTimeout(() => this.trainingSuccess = '', 4000);
+        // Automatic Audit Trail entry
+        this.platformExtensions.createAuditLog({
+          entity: 'Training',
+          action: `TRAINING_SCHEDULED: ${created.title} (${created.type}) with ${created.trainer}`,
+          username: this.authService.currentUser?.username || 'admin@skillsphere.com'
+        }).subscribe({
+          next: (log) => this.auditLogs.unshift(log)
+        });
+      },
+      error: () => {
+        this.trainingSaving = false;
+        this.trainingError = 'Failed to schedule training. Please verify backend connection.';
+      }
+    });
+  }
+
+  enrollInTraining(id?: number): void {
+    if (!id) return;
+    this.platformExtensions.enrollInTraining(id).subscribe({
+      next: (updated) => {
+        const idx = this.trainings.findIndex(t => t.id === id);
+        if (idx >= 0) this.trainings[idx] = updated;
+        this.trainingSuccess = `Enrolled successfully in ${updated.title}!`;
+        setTimeout(() => this.trainingSuccess = '', 4000);
+        // Audit log
+        this.platformExtensions.createAuditLog({
+          entity: 'TrainingEnrollment',
+          action: `TRAINING_ENROLLED: User ${this.authService.currentUser?.username || 'User'} enrolled in ${updated.title}`,
+          username: this.authService.currentUser?.username || 'admin@skillsphere.com'
+        }).subscribe({
+          next: (log) => this.auditLogs.unshift(log)
+        });
+      },
+      error: () => {
+        this.trainingError = 'Enrollment failed or session capacity reached.';
+        setTimeout(() => this.trainingError = '', 4000);
+      }
+    });
+  }
+
+  loadReports(): void {
+    this.reportLoading = true;
+    this.platformExtensions.getReports().subscribe({
+      next: (data) => {
+        this.systemReports = Array.isArray(data) ? data : [];
+        this.reportLoading = false;
+      },
+      error: () => { this.reportLoading = false; }
+    });
+  }
+
+  generateMilestoneReport(reportType: number): void {
+    this.reportLoading = true;
+    this.reportError = '';
+    this.platformExtensions.generateMilestoneReport(reportType).subscribe({
+      next: (created) => {
+        this.systemReports.unshift(created);
+        this.selectedReport = created;
+        this.reportLoading = false;
+        this.reportSuccess = `Generated ${created.title}!`;
+        setTimeout(() => this.reportSuccess = '', 4500);
+        // Audit log
+        this.platformExtensions.createAuditLog({
+          entity: 'SystemReport',
+          action: `REPORT_GENERATED: ${created.title} (${created.type})`,
+          username: this.authService.currentUser?.username || 'admin@skillsphere.com'
+        }).subscribe({
+          next: (log) => this.auditLogs.unshift(log)
+        });
+      },
+      error: () => {
+        this.reportLoading = false;
+        this.reportError = 'Failed to generate report. Please check backend connection.';
+        setTimeout(() => this.reportError = '', 4500);
+      }
+    });
+  }
+
+  formatJson(data: any): string {
+    if (!data) return '';
+    try {
+      const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      return String(data);
+    }
+  }
+
+  downloadReportJson(report: SystemReport): void {
+    const text = this.formatJson(report.data);
+    const blob = new Blob([text], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (report.title || 'report').replace(/[^a-zA-Z0-9_-]/g, '_') + '.json';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+
+  loadAuditLogs(): void {
+    this.auditLoading = true;
+    this.platformExtensions.getAuditLogs().subscribe({
+      next: (data) => {
+        this.auditLogs = Array.isArray(data) ? data : [];
+        this.auditLoading = false;
+      },
+      error: () => { this.auditLoading = false; }
+    });
+  }
+
+  saveCustomAuditLog(): void {
+    this.auditError = '';
+    const action = (this.newAuditLog.action || '').trim();
+    if (!action) {
+      this.auditError = 'Please enter an action or audit description.';
+      return;
+    }
+    const payload: Partial<AuditLogEntry> = {
+      entity: this.newAuditLog.entity || 'ComplianceAudit',
+      action: action,
+      username: this.authService.currentUser?.username || 'admin@skillsphere.com'
+    };
+    this.platformExtensions.createAuditLog(payload).subscribe({
+      next: (created) => {
+        this.auditLogs.unshift(created);
+        this.showAuditForm = false;
+        this.newAuditLog.action = '';
+        this.auditSuccess = 'Audit event logged successfully to immutable event stream!';
+        setTimeout(() => this.auditSuccess = '', 4000);
+      },
+      error: () => {
+        this.auditError = 'Failed to record audit event.';
+      }
+    });
+  }
+
+  loadPromotionCriteria(): void {
+    this.promotionLoading = true;
+    this.platformExtensions.getPromotionCriteria().subscribe({
+      next: (data) => {
+        this.promotionCriteriaList = Array.isArray(data) ? data : [];
+        this.promotionLoading = false;
+      },
+      error: () => { this.promotionLoading = false; }
+    });
+  }
+
+  parseCriteria(jsonStr: string): any {
+    try {
+      return JSON.parse(jsonStr);
+    } catch {
+      return {
+        targetRole: 'Tech Lead',
+        requiredSkillScore: 80,
+        requiredYearsExperience: 5,
+        currentScore: 82,
+        isEligible: true,
+        promotionCycle: 'Standard Review',
+        notes: ''
+      };
+    }
+  }
+
+  savePromotionCriteria(): void {
+    this.promotionError = '';
+    if (!this.newPromotionCriteria.targetRole) {
+      this.promotionError = 'Please specify a target role.';
+      return;
+    }
+    const criteriaJson = JSON.stringify({
+      targetRole: this.newPromotionCriteria.targetRole,
+      requiredSkillScore: Number(this.newPromotionCriteria.requiredSkillScore) || 80,
+      requiredYearsExperience: Number(this.newPromotionCriteria.requiredYearsExperience) || 5,
+      currentScore: Number(this.newPromotionCriteria.currentScore) || 80,
+      isEligible: (Number(this.newPromotionCriteria.currentScore) || 80) >= (Number(this.newPromotionCriteria.requiredSkillScore) || 80),
+      promotionCycle: this.newPromotionCriteria.promotionCycle || 'Q4 2026 Annual Review',
+      notes: this.newPromotionCriteria.notes || 'Promoted based on verified competencies.'
+    });
+
+    const payload: Partial<PromotionCriteriaItem> = {
+      employeeId: Number(this.newPromotionCriteria.employeeId) || 1,
+      criteriaJson: criteriaJson
+    };
+
+    this.promotionSaving = true;
+    this.platformExtensions.savePromotionCriteria(payload).subscribe({
+      next: (created) => {
+        this.promotionCriteriaList.unshift(created);
+        this.showPromotionForm = false;
+        this.promotionSaving = false;
+        this.promotionSuccess = `Promotion criteria for ${this.newPromotionCriteria.targetRole} saved successfully!`;
+        setTimeout(() => this.promotionSuccess = '', 4000);
+        // Automatic Audit Trail entry
+        this.platformExtensions.createAuditLog({
+          entity: 'PromotionCriteria',
+          action: `PROMOTION_CRITERIA_CREATED: Target ${this.newPromotionCriteria.targetRole} for Employee #${created.employeeId}`,
+          username: this.authService.currentUser?.username || 'admin@skillsphere.com'
+        }).subscribe({
+          next: (log) => this.auditLogs.unshift(log)
+        });
+      },
+      error: () => {
+        this.promotionSaving = false;
+        this.promotionError = 'Failed to save promotion criteria. Please ensure valid permissions.';
+      }
+    });
+  }
+
+  nominateForPromotion(pc: PromotionCriteriaItem): void {
+    const details = this.parseCriteria(pc.criteriaJson);
+    const emp = this.employees.find(e => e.id === pc.employeeId);
+    const empName = emp ? emp.name : 'Employee #' + pc.employeeId;
+    const reqPayload = {
+      requestType: 'PROMOTION_APPROVAL',
+      employeeId: pc.employeeId,
+      employeeName: empName,
+      title: `Promotion Nomination: ${empName} to ${details.targetRole || 'Target Role'}`,
+      details: `Candidate has met skill benchmark of ${details.requiredSkillScore || 80}% with verified score ${details.currentScore || 85}% and ${details.requiredYearsExperience || 5} years experience. Cycle: ${details.promotionCycle || 'Current'}.`,
+      status: 'PENDING'
+    };
+
+    this.platformExtensions.submitApprovalRequest(reqPayload as any).subscribe({
+      next: (req) => {
+        this.approvalRequests.unshift(req);
+        this.promotionSuccess = `Nomination for ${empName} submitted to Governance Approvals queue!`;
+        setTimeout(() => this.promotionSuccess = '', 4500);
+        // Audit log
+        this.platformExtensions.createAuditLog({
+          entity: 'ApprovalWorkflow',
+          action: `PROMOTION_NOMINATION_SUBMITTED: ${req.title}`,
+          username: this.authService.currentUser?.username || 'admin@skillsphere.com'
+        }).subscribe({
+          next: (log) => this.auditLogs.unshift(log)
+        });
+      },
+      error: () => {
+        this.promotionError = 'Failed to submit nomination to approvals.';
+        setTimeout(() => this.promotionError = '', 4000);
+      }
+    });
+  }
+
+  // --- Approval Workflow Engine State ---
+  approvalRequests: ApprovalRequest[] = [];
+  approvalLoading = false;
+  approvalSuccess = '';
+
+  get pendingApprovalCount(): number {
+    return this.approvalRequests.filter(r => r.status === 'PENDING').length;
+  }
+
+  loadApprovals(): void {
+    this.approvalLoading = true;
+    this.platformExtensions.getApprovals().subscribe({
+      next: (data) => {
+        this.approvalRequests = Array.isArray(data) ? data : [];
+        this.approvalLoading = false;
+      },
+      error: () => { this.approvalLoading = false; }
+    });
+  }
+
+  approveAction(id?: number): void {
+    if (!id) return;
+    this.platformExtensions.approveRequest(id, 'Approved by HR Administrator').subscribe({
+      next: (updated) => {
+        const idx = this.approvalRequests.findIndex(r => r.id === id);
+        if (idx >= 0) this.approvalRequests[idx] = updated;
+        this.approvalSuccess = 'Critical action approved and recorded in immutable audit log!';
+        setTimeout(() => this.approvalSuccess = '', 4000);
+        this.platformExtensions.createAuditLog({
+          entity: 'ApprovalWorkflow',
+          action: `ACTION_APPROVED: ${updated.title} (Status: APPROVED)`,
+          username: this.authService.currentUser?.username || 'admin@skillsphere.com'
+        }).subscribe({
+          next: (log) => this.auditLogs.unshift(log)
+        });
+      }
+    });
+  }
+
+  rejectAction(id?: number): void {
+    if (!id) return;
+    this.platformExtensions.rejectRequest(id, 'Rejected by HR Administrator').subscribe({
+      next: (updated) => {
+        const idx = this.approvalRequests.findIndex(r => r.id === id);
+        if (idx >= 0) this.approvalRequests[idx] = updated;
+        this.approvalSuccess = 'Request rejected and recorded in audit log.';
+        setTimeout(() => this.approvalSuccess = '', 4000);
+        this.platformExtensions.createAuditLog({
+          entity: 'ApprovalWorkflow',
+          action: `ACTION_REJECTED: ${updated.title} (Status: REJECTED)`,
+          username: this.authService.currentUser?.username || 'admin@skillsphere.com'
+        }).subscribe({
+          next: (log) => this.auditLogs.unshift(log)
+        });
+      }
+    });
+  }
+}

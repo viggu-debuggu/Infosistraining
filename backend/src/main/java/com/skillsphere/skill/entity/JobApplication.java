@@ -44,9 +44,11 @@ public class JobApplication {
     public InternalJob getJob() { return job; }
     public void setJob(InternalJob job) { this.job = job; }
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     public Employee getEmployee() { return employee; }
     public void setEmployee(Employee employee) { this.employee = employee; }
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     public Student getStudent() { return student; }
     public void setStudent(Student student) { this.student = student; }
 

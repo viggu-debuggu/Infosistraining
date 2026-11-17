@@ -13,6 +13,9 @@ public class CareerPlan {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true)
+    private java.util.UUID planId = java.util.UUID.randomUUID();
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id")
     private Employee employee;
@@ -52,9 +55,11 @@ public class CareerPlan {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     public Employee getEmployee() { return employee; }
     public void setEmployee(Employee employee) { this.employee = employee; }
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     public Student getStudent() { return student; }
     public void setStudent(Student student) { this.student = student; }
 
@@ -88,5 +93,13 @@ public class CareerPlan {
 
     public Long getStudentId() {
         return student != null ? student.getId() : null;
+    }
+
+    public java.util.UUID getPlanId() {
+        return planId;
+    }
+
+    public void setPlanId(java.util.UUID planId) {
+        this.planId = planId;
     }
 }

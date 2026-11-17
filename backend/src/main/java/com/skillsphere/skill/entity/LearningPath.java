@@ -13,6 +13,9 @@ public class LearningPath {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true)
+    private java.util.UUID pathId = java.util.UUID.randomUUID();
+
     @NotBlank(message = "Title is required")
     @Column(nullable = false, length = 200)
     private String title;
@@ -63,4 +66,12 @@ public class LearningPath {
 
     public String getCoursesSummary() { return coursesSummary; }
     public void setCoursesSummary(String coursesSummary) { this.coursesSummary = coursesSummary; }
+
+    public java.util.UUID getPathId() {
+        return pathId;
+    }
+
+    public void setPathId(java.util.UUID pathId) {
+        this.pathId = pathId;
+    }
 }

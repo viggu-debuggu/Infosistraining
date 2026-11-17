@@ -2,6 +2,8 @@ package com.skillsphere.skill.service;
 
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +40,7 @@ public class CourseService {
         this.studentRepository = studentRepository;
     }
 
+    @Cacheable("courses")
     public List<Course> getAllCourses() {
         return courseRepository.findAll();
     }
@@ -48,6 +51,7 @@ public class CourseService {
     }
 
     @Transactional
+    @CacheEvict(value = "courses", allEntries = true)
     public Course createCourse(Course course) {
         return courseRepository.save(course);
     }

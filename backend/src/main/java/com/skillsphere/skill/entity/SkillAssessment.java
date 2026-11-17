@@ -34,6 +34,9 @@ public class SkillAssessment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true)
+    private java.util.UUID assessId = java.util.UUID.randomUUID();
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id")
     private Employee employee;
@@ -210,5 +213,13 @@ public class SkillAssessment {
 
     public void setSkillId(Long skillId) {
         this.skillId = skillId;
+    }
+
+    public java.util.UUID getAssessId() {
+        return assessId;
+    }
+
+    public void setAssessId(java.util.UUID assessId) {
+        this.assessId = assessId;
     }
 }
